@@ -1,9 +1,9 @@
 plugins {
-        id 'java-library'
-        id 'maven-publish'
-        id 'signing'
-        id 'org.openjfx.javafxplugin' version '0.1.0'
-        id "io.codearte.nexus-staging" version "0.30.0"
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+    id "io.github.gradle-nexus.publish-plugin" version "2.0.0"
 }
 
 allprojects {
@@ -28,13 +28,13 @@ java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
 
-    //withJavadocJar()
+    withJavadocJar()
     withSourcesJar()
 }
 
 javafx {
     version = "20"
-    modules = [ 'javafx.controls', 'javafx.fxml', 'javafx.web', 'javafx.swing' ]
+    modules = ['javafx.controls', 'javafx.fxml', 'javafx.web', 'javafx.swing']
 }
 
 dependencies {
@@ -86,29 +86,6 @@ publishing {
             }
         }
     }
-    repositories {
-        maven {
-            name = "OSSRH"
-            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-            url = isReleaseVersion ? releasesRepoUrl : snapshotsRepoUrl
-            credentials {
-                username = System.getenv("MAVEN_USERNAME")
-                password = System.getenv("MAVEN_PASSWORD")
-            }
-        }
-        // This currently only works for released versions, as github has problems with overwriting snapshots
-        if (isReleaseVersion) {
-            maven {
-                name = "GitHubPackages"
-                url = "https://maven.pkg.github.com/JabRef/afterburner.fx"
-                credentials {
-                    username = System.getenv("GITHUB_ACTOR")
-                    password = System.getenv("GITHUB_TOKEN")
-                }
-            }
-        }
-    }
 }
 
 signing {
@@ -116,13 +93,14 @@ signing {
     useInMemoryPgpKeys(System.getenv("SIGNING_KEY"), System.getenv("SIGNING_PASSWORD"))
     sign publishing.publications.mavenJava
 }
-
-nexusStaging {
-    username = System.getenv("MAVEN_USERNAME")
-    password = System.getenv("MAVEN_PASSWORD")
+nexusPublishing {
+    repositories {
+        sonatype {  //only for users registered in Sonatype after 24 Feb 2021
+            username = System.getenv("MAVEN_USERNAME")
+            password = System.getenv("MAVEN_PASSWORD")
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+        }
+    }
 }
 
-// Don't publish snapshots to Maven Central
-closeAndReleaseRepository.onlyIf { isReleaseVersion }
-closeRepository.onlyIf { isReleaseVersion }
-releaseRepository.onlyIf { isReleaseVersion }
