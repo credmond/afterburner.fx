@@ -24,8 +24,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -170,18 +168,15 @@ public class Injector {
     }
 
     static void injectIntoField(final Field field, final Object instance, final Object target) {
-        AccessController.doPrivileged((PrivilegedAction<?>) () -> {
-            boolean wasAccessible = field.isAccessible();
+        boolean wasAccessible = field.canAccess(instance);
             try {
                 field.setAccessible(true);
                 field.set(instance, target);
-                return null; // return nothing...
             } catch (IllegalArgumentException | IllegalAccessException ex) {
                 throw new IllegalStateException("Cannot set field: " + field + " with value " + target, ex);
             } finally {
                 field.setAccessible(wasAccessible);
             }
-        });
     }
 
     static void initialize(Object instance) {
@@ -200,17 +195,15 @@ public class Injector {
         Method[] declaredMethods = clazz.getDeclaredMethods();
         for (final Method method : declaredMethods) {
             if (method.isAnnotationPresent(annotationClass)) {
-                AccessController.doPrivileged((PrivilegedAction<?>) () -> {
-                    boolean wasAccessible = method.isAccessible();
+                    boolean wasAccessible = method.canAccess(instance);
                     try {
                         method.setAccessible(true);
-                        return method.invoke(instance);
+                        method.invoke(instance);
                     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
                         throw new IllegalStateException("Problem invoking " + annotationClass + " : " + method, ex);
                     } finally {
                         method.setAccessible(wasAccessible);
                     }
-                });
             }
         }
         Class<?> superclass = clazz.getSuperclass();

@@ -229,8 +229,8 @@ public class ViewLoader {
      * @param ending    the suffix to append
      * @return the conventional name with stripped ending
      */
-    protected String getConventionalName(boolean lowercase, String ending) {
-        return getConventionalName(lowercase) + ending;
+    protected String getConventionalName(boolean lowercase, boolean stripClassEnding, String ending) {
+        return getConventionalName(lowercase, stripClassEnding) + ending;
     }
 
     /**
@@ -251,14 +251,25 @@ public class ViewLoader {
     }
 
     private String getResourceCamelOrLowerCase(boolean mandatory, String ending) {
-        String name = getConventionalName(true, ending);
+
+        // When the classname matches to FXML file
+        String name = getConventionalName(false, false, ending);
         URL found = clazz.getResource(name);
         if (found != null) {
             return name;
         }
-        LOGGER.debug("File: " + name + " not found, attempting with camel case");
-        name = getConventionalName(false, ending);
+
+        LOGGER.debug("File: " + name + " not found, attempting with camel-case without suffix");
+        name = getConventionalName(false, true, ending);
         found = clazz.getResource(name);
+        if (found != null) {
+            return name;
+        }
+
+        LOGGER.debug("File: " + name + " not found, attempting lowercase without suffix ");
+        name = getConventionalName(true, true, ending);
+        found = clazz.getResource(name);
+
         if (mandatory && (found == null)) {
             final String message = "Cannot load file " + name;
             LOGGER.error(message);
@@ -273,9 +284,11 @@ public class ViewLoader {
      * @param lowercase indicates whether the simple class name should be
      * @return the name of the view without the "View" prefix.
      */
-    protected String getConventionalName(boolean lowercase) {
+    protected String getConventionalName(boolean lowercase, boolean stripEnding) {
         final String clazzWithEnding = clazz.getSimpleName();
-        String clazz = stripEnding(clazzWithEnding);
+
+        String clazz = stripEnding ? stripEnding(clazzWithEnding) : clazzWithEnding;
+
         if (lowercase) {
             clazz = clazz.toLowerCase();
         }
@@ -283,7 +296,7 @@ public class ViewLoader {
     }
 
     private String getBundleName() {
-        String conventionalName = getConventionalName(true);
+        String conventionalName = getConventionalName(true, true);
         return clazz.getPackage().getName() + "." + conventionalName;
     }
 
